@@ -1,0 +1,361 @@
+<?xml version="1.0"?>
+
+<robot name="ugv" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- ========================================================= -->
+    <!-- Robot dimensions -->
+    <!-- ========================================================= -->
+
+    <xacro:property name="body_length" value="0.8"/>
+    <xacro:property name="body_width" value="0.5"/>
+    <xacro:property name="body_height" value="0.2"/>
+
+    <xacro:property name="wheel_radius" value="0.12"/>
+    <xacro:property name="wheel_width" value="0.08"/>
+
+    <xacro:property name="wheel_x" value="0.25"/>
+    <xacro:property name="wheel_y" value="0.29"/>
+    <xacro:property name="wheel_z" value="-0.02"/>
+
+
+    <!-- ========================================================= -->
+    <!-- Materials -->
+    <!-- ========================================================= -->
+
+    <material name="grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+    </material>
+
+    <material name="black">
+        <color rgba="0.05 0.05 0.05 1.0"/>
+    </material>
+
+
+    <!-- ========================================================= -->
+    <!-- Base -->
+    <!-- ========================================================= -->
+
+    <link name="base_link">
+
+        <!-- Visual -->
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="${body_length} ${body_width} ${body_height}"/>
+            </geometry>
+            <material name="grey"/>
+        </visual>
+
+        <!-- Collision -->
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="${body_length} ${body_width} ${body_height}"/>
+            </geometry>
+        </collision>
+
+        <!-- Inertia -->
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="10.0"/>
+            <inertia
+                ixx="0.2417"
+                ixy="0.0"
+                ixz="0.0"
+                iyy="0.5417"
+                iyz="0.0"
+                izz="0.7083"/>
+        </inertial>
+
+    </link>
+
+
+    <!-- ========================================================= -->
+    <!-- Front Left Wheel -->
+    <!-- ========================================================= -->
+
+    <link name="front_left_wheel">
+
+        <!-- Visual -->
+        <visual>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry>
+                <cylinder
+                    radius="${wheel_radius}"
+                    length="${wheel_width}"/>
+            </geometry>
+            <material name="black"/>
+        </visual>
+
+        <!-- Collision -->
+        <collision>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry>
+                <cylinder
+                    radius="${wheel_radius}"
+                    length="${wheel_width}"/>
+            </geometry>
+        </collision>
+
+        <!-- Inertia -->
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="1.0"/>
+            <inertia
+                ixx="0.00413"
+                ixy="0.0"
+                ixz="0.0"
+                iyy="0.0072"
+                iyz="0.0"
+                izz="0.00413"/>
+        </inertial>
+
+    </link>
+
+    <joint name="front_left_wheel_joint" type="continuous">
+        <parent link="base_link"/>
+        <child link="front_left_wheel"/>
+
+        <origin
+            xyz="${wheel_x} ${wheel_y} ${wheel_z}"
+            rpy="0 0 0"/>
+
+        <axis xyz="0 1 0"/>
+    </joint>
+
+
+    <!-- ========================================================= -->
+    <!-- Front Right Wheel -->
+    <!-- ========================================================= -->
+
+    <link name="front_right_wheel">
+
+        <!-- Visual -->
+        <visual>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry>
+                <cylinder
+                    radius="${wheel_radius}"
+                    length="${wheel_width}"/>
+            </geometry>
+            <material name="black"/>
+        </visual>
+
+        <!-- Collision -->
+        <collision>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry>
+                <cylinder
+                    radius="${wheel_radius}"
+                    length="${wheel_width}"/>
+            </geometry>
+        </collision>
+
+        <!-- Inertia -->
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="1.0"/>
+            <inertia
+                ixx="0.00413"
+                ixy="0.0"
+                ixz="0.0"
+                iyy="0.0072"
+                iyz="0.0"
+                izz="0.00413"/>
+        </inertial>
+
+    </link>
+
+    <joint name="front_right_wheel_joint" type="continuous">
+        <parent link="base_link"/>
+        <child link="front_right_wheel"/>
+
+        <origin
+            xyz="${wheel_x} -${wheel_y} ${wheel_z}"
+            rpy="0 0 0"/>
+
+        <axis xyz="0 1 0"/>
+    </joint>
+
+
+    <!-- ========================================================= -->
+    <!-- Rear Left Wheel -->
+    <!-- ========================================================= -->
+
+    <link name="rear_left_wheel">
+
+        <!-- Visual -->
+        <visual>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry>
+                <cylinder
+                    radius="${wheel_radius}"
+                    length="${wheel_width}"/>
+            </geometry>
+            <material name="black"/>
+        </visual>
+
+        <!-- Collision -->
+        <collision>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry>
+                <cylinder
+                    radius="${wheel_radius}"
+                    length="${wheel_width}"/>
+            </geometry>
+        </collision>
+
+        <!-- Inertia -->
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="1.0"/>
+            <inertia
+                ixx="0.00413"
+                ixy="0.0"
+                ixz="0.0"
+                iyy="0.0072"
+                iyz="0.0"
+                izz="0.00413"/>
+        </inertial>
+
+    </link>
+
+    <joint name="rear_left_wheel_joint" type="continuous">
+        <parent link="base_link"/>
+        <child link="rear_left_wheel"/>
+
+        <origin
+            xyz="-${wheel_x} ${wheel_y} ${wheel_z}"
+            rpy="0 0 0"/>
+
+        <axis xyz="0 1 0"/>
+    </joint>
+
+
+    <!-- ========================================================= -->
+    <!-- Rear Right Wheel -->
+    <!-- ========================================================= -->
+
+    <link name="rear_right_wheel">
+
+        <!-- Visual -->
+        <visual>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry>
+                <cylinder
+                    radius="${wheel_radius}"
+                    length="${wheel_width}"/>
+            </geometry>
+            <material name="black"/>
+        </visual>
+
+        <!-- Collision -->
+        <collision>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry>
+                <cylinder
+                    radius="${wheel_radius}"
+                    length="${wheel_width}"/>
+            </geometry>
+        </collision>
+
+        <!-- Inertia -->
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="1.0"/>
+            <inertia
+                ixx="0.00413"
+                ixy="0.0"
+                ixz="0.0"
+                iyy="0.0072"
+                iyz="0.0"
+                izz="0.00413"/>
+        </inertial>
+
+    </link>
+
+    <joint name="rear_right_wheel_joint" type="continuous">
+        <parent link="base_link"/>
+        <child link="rear_right_wheel"/>
+
+        <origin
+            xyz="-${wheel_x} -${wheel_y} ${wheel_z}"
+            rpy="0 0 0"/>
+
+        <axis xyz="0 1 0"/>
+    </joint>
+
+    <!-- ========================================================= -->
+    <!-- ROS 2 Control -->
+    <!-- ========================================================= -->
+
+    <ros2_control name="GazeboSystem" type="system">
+
+        <hardware>
+            <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+        </hardware>
+
+        <!-- Front Left Wheel -->
+        <joint name="front_left_wheel_joint">
+            <command_interface name="velocity">
+                <param name="min">-10</param>
+                <param name="max">10</param>
+            </command_interface>
+
+            <state_interface name="position"/>
+            <state_interface name="velocity"/>
+        </joint>
+
+        <!-- Rear Left Wheel -->
+        <joint name="rear_left_wheel_joint">
+            <command_interface name="velocity">
+                <param name="min">-10</param>
+                <param name="max">10</param>
+            </command_interface>
+
+            <state_interface name="position"/>
+            <state_interface name="velocity"/>
+        </joint>
+
+        <!-- Front Right Wheel -->
+        <joint name="front_right_wheel_joint">
+            <command_interface name="velocity">
+                <param name="min">-10</param>
+                <param name="max">10</param>
+            </command_interface>
+
+            <state_interface name="position"/>
+            <state_interface name="velocity"/>
+        </joint>
+
+        <!-- Rear Right Wheel -->
+        <joint name="rear_right_wheel_joint">
+            <command_interface name="velocity">
+                <param name="min">-10</param>
+                <param name="max">10</param>
+            </command_interface>
+
+            <state_interface name="position"/>
+            <state_interface name="velocity"/>
+        </joint>
+
+    </ros2_control>
+
+
+    <!-- ========================================================= -->
+    <!-- Gazebo ROS 2 Control Plugin -->
+    <!-- ========================================================= -->
+
+    <gazebo>
+        <plugin
+            filename="libgazebo_ros2_control.so"
+            name="gazebo_ros2_control">
+
+            <parameters>
+                $(find ugv)/config/controllers.yaml
+            </parameters>
+
+        </plugin>
+    </gazebo>
+
+</robot>
