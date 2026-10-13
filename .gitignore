@@ -4,6 +4,7 @@ log/
 
 *.pyc
 __pycache__/
+.vscode/
 
 # RL training artifacts and backups
 runs/
