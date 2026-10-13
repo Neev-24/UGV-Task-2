@@ -30,7 +30,7 @@ class EpisodeSummaryCallback(BaseCallback):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--steps", type=int, default=1000)
+    parser.add_argument("--steps", type=int, default=4096)
     parser.add_argument("--out", type=Path, default=Path("runs/ugv_ppo"))
     args = parser.parse_args()
 
@@ -51,8 +51,8 @@ def main():
             "MlpPolicy",
             env,
             learning_rate=3e-4,
-            n_steps=1000,
-            batch_size=64,
+            n_steps=32,
+            batch_size=32,
             n_epochs=10,
             gamma=0.99,
             gae_lambda=0.95,

@@ -43,9 +43,32 @@ class UGVBridge(Node):
             self.odom = msg
 
     def contact_callback(self, msg):
-        if msg.states:
+        for state in msg.states:
+            collision1 = state.collision1_name
+            collision2 = state.collision2_name
+
+            # Ignore all four wheels touching the ground
+            wheel_names = (
+                'front_left_wheel',
+                'front_right_wheel',
+                'rear_left_wheel',
+                'rear_right_wheel',
+            )
+
+            is_wheel_ground_contact = (
+                'ground_plane' in collision1 or
+                'ground_plane' in collision2
+            ) and any(
+                wheel in collision1 or wheel in collision2
+                for wheel in wheel_names
+            )
+
+            if is_wheel_ground_contact:
+                continue
+
             with self.lock:
                 self.collision_detected = True
+            break
 
     def stop_robot(self):
         self.cmd_pub.publish(Twist())
@@ -83,6 +106,8 @@ class UGVBridge(Node):
         response = future.result()
         if response is None or not response.success:
             raise RuntimeError("Gazebo failed to reset model 'ugv'")
+        
+        time.sleep(0.2)
 
 
 class UGVEnv(gym.Env):
@@ -177,9 +202,13 @@ class UGVEnv(gym.Env):
         super().reset(seed=seed)
         self.bridge.stop_robot()
         self.bridge.reset_model()
+        with self.bridge.lock:
+            self.bridge.scan = None
+            self.bridge.odom = None
         self.bridge.reset_collision()
         self.steps = 0
 
+        time.sleep(0.2)
         scan, odom = self._read_state()
         x, y, yaw = self._pose_and_yaw(odom)
 

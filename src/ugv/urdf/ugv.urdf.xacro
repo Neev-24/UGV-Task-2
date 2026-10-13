@@ -366,6 +366,80 @@
         </sensor>
     </gazebo>
 
+        
+    <!-- Contact sensor front left wheel -->
+    <gazebo reference="front_left_wheel">
+        <sensor name="front_left_contact_sensor" type="contact">
+        <always_on>true</always_on>
+        <update_rate>50</update_rate>
+        <contact>
+            <collision>front_left_wheel_collision</collision>
+        </contact>
+        <plugin name="front_left_bumper_ros" filename="libgazebo_ros_bumper.so">
+            <ros>
+            <namespace>/ugv</namespace>
+            <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>front_left_wheel</frame_name>
+        </plugin>
+        </sensor>
+    </gazebo>
+
+    <!-- Contact sensor front right wheel -->
+    <gazebo reference="front_right_wheel">
+        <sensor name="front_right_contact_sensor" type="contact">
+        <always_on>true</always_on>
+        <update_rate>50</update_rate>
+        <contact>
+            <collision>front_right_wheel_collision</collision>
+        </contact>
+        <plugin name="front_right_bumper_ros" filename="libgazebo_ros_bumper.so">
+            <ros>
+            <namespace>/ugv</namespace>
+            <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>front_right_wheel</frame_name>
+        </plugin>
+        </sensor>
+    </gazebo>
+
+    <!-- Contact sensor rear left wheel -->
+    <gazebo reference="rear_left_wheel">
+        <sensor name="rear_left_contact_sensor" type="contact">
+        <always_on>true</always_on>
+        <update_rate>50</update_rate>
+        <contact>
+            <collision>rear_left_wheel_collision</collision>
+        </contact>
+        <plugin name="rear_left_bumper_ros" filename="libgazebo_ros_bumper.so">
+            <ros>
+            <namespace>/ugv</namespace>
+            <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>rear_left_wheel</frame_name>
+        </plugin>
+        </sensor>
+    </gazebo>
+
+    <!-- Contact sensor rear right wheel -->
+    <gazebo reference="rear_right_wheel">
+        <sensor name="rear_right_contact_sensor" type="contact">
+        <always_on>true</always_on>
+        <update_rate>50</update_rate>
+        <contact>
+            <collision>rear_right_wheel_collision</collision>
+        </contact>
+        <plugin name="rear_right_bumper_ros" filename="libgazebo_ros_bumper.so">
+            <ros>
+            <namespace>/ugv</namespace>
+            <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>rear_right_wheel</frame_name>
+        </plugin>
+        </sensor>
+    </gazebo>
+
+
 
 
     <!-- ========================================================= -->
