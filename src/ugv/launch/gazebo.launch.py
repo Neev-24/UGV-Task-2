@@ -21,6 +21,8 @@ def generate_launch_description():
         'ugv.urdf.xacro'
     )
 
+    world_file = os.path.join(package_path, 'worlds', 'empty_with_state.world')
+
     gazebo_launch_file = os.path.join(
         get_package_share_directory('gazebo_ros'),
         'launch',
@@ -40,7 +42,8 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 gazebo_launch_file
-            )
+            ),
+            launch_arguments={'world': world_file}.items()
         ),
 
         # Publish robot description and TF
