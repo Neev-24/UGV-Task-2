@@ -239,6 +239,10 @@ class UGVEnv(gym.Env):
         self.steps += 1
         progress = self.previous_distance - distance
         reward = 10.0 * progress - 0.01
+
+        if nearest_obstacle < 0.50:
+            reward -= 0.5 * (0.50 - nearest_obstacle) / 0.50
+
         self.previous_distance = distance
 
         success = distance < 0.25
@@ -247,9 +251,9 @@ class UGVEnv(gym.Env):
         truncated = self.steps >= self.max_steps
 
         if success:
-            reward += 50.0
+            reward += 100.0
         if collision:
-            reward -= 50.0
+            reward -= 100.0
 
         if terminated or truncated:
             self.bridge.stop_robot()

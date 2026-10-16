@@ -10,7 +10,7 @@ def main():
     bridge = UGVBridge()
     env = UGVEnv(bridge)
 
-    model = PPO.load("runs/ugv_ppo/final.zip")
+    model = PPO.load("runs/ugv_ppo_v10/final.zip")
 
     try:
         obs, info = env.reset()
@@ -18,6 +18,12 @@ def main():
 
         while True:
             action, _ = model.predict(obs, deterministic=True)
+
+            # print(
+            #     f"Linear action: {action[0]:.3f} | "
+            #     f"Angular action: {action[1]:.3f} | "
+            #     f"Front LiDAR: {obs[10:14]}"
+            # )
 
             obs, reward, terminated, truncated, info = env.step(action)
             total_reward += reward
