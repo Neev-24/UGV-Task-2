@@ -17,7 +17,7 @@ def main():
         help="Path to the trained SAC model",
     )
     parser.add_argument("--episodes", type=int, default=5)
-    parser.add_argument("--delay", type=float, default=0.1)
+    parser.add_argument("--delay", type=float, default=0.0)
     args = parser.parse_args()
 
     rclpy.init()

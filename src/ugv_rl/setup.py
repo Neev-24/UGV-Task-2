@@ -17,4 +17,12 @@ setup(
     maintainer_email='user@example.com',
     description='Gymnasium reinforcement learning environment for a ROS 2 UGV',
     license='Apache-2.0',
+    entry_points={
+        'console_scripts': [
+            'train_ppo = ugv_rl.train_ppo:main',
+            'train_sac = ugv_rl.train_sac:main',
+            'run_ppo = ugv_rl.run_ppo:main',
+            'run_sac = ugv_rl.run_sac:main',
+        ],
+    },
 )

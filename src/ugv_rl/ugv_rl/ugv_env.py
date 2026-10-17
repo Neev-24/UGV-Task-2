@@ -11,6 +11,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from gazebo_msgs.srv import SetEntityState
 from gazebo_msgs.msg import ContactsState
+from gazebo_msgs.msg import ModelStates
 
 
 class UGVBridge(Node):
@@ -20,7 +21,10 @@ class UGVBridge(Node):
         self.lock = threading.Lock()
         self.scan = None
         self.odom = None
+        self.new_data_event = threading.Event()
         self.collision_detected = False
+        self.model_pose = None
+
 
         self.cmd_pub = self.create_publisher(
             Twist, '/diff_drive_controller/cmd_vel_unstamped', 10
@@ -33,14 +37,25 @@ class UGVBridge(Node):
             Odometry, '/diff_drive_controller/odom', self.odom_callback, 10
         )
         self.create_subscription(ContactsState, '/ugv/contacts', self.contact_callback, 10)
+        self.create_subscription(ModelStates, '/gazebo/model_states', self.model_states_callback, 10)
+
+    def model_states_callback(self, msg):
+        if 'ugv' in msg.name:
+            idx = msg.name.index('ugv')
+            with self.lock:
+                self.model_pose = msg.pose[idx]
 
     def scan_callback(self, msg):
         with self.lock:
             self.scan = msg
+            if self.odom is not None:
+                self.new_data_event.set()
 
     def odom_callback(self, msg):
         with self.lock:
             self.odom = msg
+            if self.scan is not None:
+                self.new_data_event.set()
 
     def contact_callback(self, msg):
         for state in msg.states:
@@ -121,10 +136,10 @@ class UGVEnv(gym.Env):
         self.max_steps = max_steps
         self.steps = 0
 
-        # 24 LiDAR sectors + goal distance + relative goal angle.
+        # 24 LiDAR sectors + distance + relative angle + linear vel + angular vel
         self.observation_space = gym.spaces.Box(
-            low=np.array([0.0] * 24 + [0.0, -math.pi], dtype=np.float32),
-            high=np.array([1.0] * 24 + [1.0, math.pi], dtype=np.float32),
+            low=np.array([0.0] * 24 + [0.0, -1.0, -1.0, -1.0], dtype=np.float32),
+            high=np.array([1.0] * 24 + [1.0, 1.0, 1.0, 1.0], dtype=np.float32),
             dtype=np.float32,
         )
 
@@ -139,21 +154,11 @@ class UGVEnv(gym.Env):
         self.previous_distance = None
 
     def _read_state(self, timeout=5.0):
-        deadline = time.monotonic() + timeout
-
-        while time.monotonic() < deadline:
-            rclpy.spin_once(self.bridge, timeout_sec=0.05)
-
-            with self.bridge.lock:
-                scan = self.bridge.scan
-                odom = self.bridge.odom
-
-            if scan is not None and odom is not None:
-                return scan, odom
-
-        raise RuntimeError(
-            "Timed out waiting for /scan and odometry. Is Gazebo running?"
-        )
+        self.bridge.new_data_event.clear()
+        if not self.bridge.new_data_event.wait(timeout= timeout):
+            raise RuntimeError("Timed out waiting for fresh /scan and odometry.")
+        with self.bridge.lock:
+            return self.bridge.scan, self.bridge.odom
 
     def _pose_and_yaw(self, odom):
         p = odom.pose.pose.position
@@ -166,33 +171,16 @@ class UGVEnv(gym.Env):
         return p.x, p.y, yaw
 
     def _observation(self, scan, odom):
-        x, y, yaw = self._pose_and_yaw(odom)
-
-        ranges = np.asarray(scan.ranges, dtype=np.float32)
-        ranges[~np.isfinite(ranges)] = scan.range_max
-        ranges = np.clip(ranges, scan.range_min, scan.range_max)
-
-        # Divide the full scan into 24 sectors and retain the nearest return.
-        sectors = np.array_split(ranges, 24)
-        lidar = np.array(
-            [np.min(s) if len(s) else scan.range_max for s in sectors],
-            dtype=np.float32,
-        )
-        lidar = np.clip(lidar / scan.range_max, 0.0, 1.0)
-
-        dx = self.goal[0] - x
-        dy = self.goal[1] - y
-        distance = math.hypot(dx, dy)
-        relative_angle = math.atan2(
-            math.sin(math.atan2(dy, dx) - yaw),
-            math.cos(math.atan2(dy, dx) - yaw),
-        )
+        linear_vel = float(odom.twist.twist.linear.x) / 0.3
+        angular_vel = float(odom.twist.twist.angular.z) / 1.2
 
         obs = np.concatenate([
             lidar,
             np.array([
                 min(distance / 8.0, 1.0),
                 relative_angle / math.pi,
+                np.clip(linear_vel, -1.0, 1.0),
+                np.clip(angular_vel, -1.0, 1.0),
             ], dtype=np.float32),
         ]).astype(np.float32)
 
@@ -202,20 +190,20 @@ class UGVEnv(gym.Env):
         super().reset(seed=seed)
         self.bridge.stop_robot()
         self.bridge.reset_model()
-        with self.bridge.lock:
-            self.bridge.scan = None
-            self.bridge.odom = None
+        
+        time.sleep(0.15)
         self.bridge.reset_collision()
         self.steps = 0
 
-        time.sleep(0.2)
         scan, odom = self._read_state()
         x, y, yaw = self._pose_and_yaw(odom)
 
-        # Define the goal 2 m ahead in this episode's odometry frame.
+        # Randomize goal within the forward-facing sector (1.5 m to 4.0 m)
+        goal_dist = float(self.np_random.uniform(1.5, 4.0))
+        goal_angle = float(self.np_random.uniform(-math.pi * 0.75, math.pi * 0.75))
         self.goal = (
-            x + 2.0 * math.cos(yaw),
-            y + 2.0 * math.sin(yaw),
+            x + goal_dist * math.cos(yaw + goal_angle),
+            y + goal_dist * math.sin(yaw + goal_angle),
         )
 
         obs, distance, _ = self._observation(scan, odom)
@@ -227,7 +215,7 @@ class UGVEnv(gym.Env):
         action = np.clip(action, -1.0, 1.0)
 
         cmd = Twist()
-        cmd.linear.x = float(action[0]) * 0.3
+        cmd.linear.x = float((action[0] + 1.0) * 0.5) * 0.3
         cmd.angular.z = float(action[1]) * 1.2
         self.bridge.cmd_pub.publish(cmd)
 
@@ -238,14 +226,15 @@ class UGVEnv(gym.Env):
 
         self.steps += 1
         progress = self.previous_distance - distance
-        reward = 10.0 * progress - 0.01
+        relative_angle = obs[25]  * math.pi
+        reward = (15.0 * progress - 0.02 + 0.05 * math.cos(relative_angle))
 
-        if nearest_obstacle < 0.50:
-            reward -= 0.5 * (0.50 - nearest_obstacle) / 0.50
+        clearance = nearest_obstacle - 0.45
+        if clearance < 0.40:
+            reward -= 0.5 * (0.40 - max(0.0, clearance)) / 0.40
 
-        self.previous_distance = distance
-
-        success = distance < 0.25
+        self.previous_distance = distanc
+        success = distance < 0.30
         collision = self.bridge.has_collision()
         terminated = success or collision
         truncated = self.steps >= self.max_steps

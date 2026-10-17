@@ -1,7 +1,7 @@
 import time
 import rclpy
 from stable_baselines3 import PPO
-from ugv_env import UGVBridge, UGVEnv
+from ugv_rl.ugv_env import UGVBridge, UGVEnv
 
 
 def main():
@@ -37,7 +37,6 @@ def main():
                 print("Episode ended:", info)
                 break
 
-            time.sleep(0.05)
 
     except KeyboardInterrupt:
         print("Inference stopped.")

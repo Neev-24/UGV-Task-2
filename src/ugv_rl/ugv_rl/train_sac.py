@@ -32,7 +32,7 @@ def main():
     )
     parser.add_argument("--steps", type=int, default=10000,
                         help="Additional timesteps to train")
-    parser.add_argument("--out", default="runs/ugv_sac_v1/final.zip",
+    parser.add_argument("--out", default="runs/ugv_sac_v1/",
                         help="Output directory")
     parser.add_argument("--resume", action="store_true",
                         help="Resume from latest checkpoint")
@@ -75,10 +75,6 @@ def main():
                 checkpoint,
                 env=env,
                 device="auto",
-            )
-
-            replay_path = checkpoint.replace(
-                ".zip", "_replay_buffer.pkl"
             )
 
             match = re.search(r"sac_(\d+)_steps\.zip$", checkpoint)

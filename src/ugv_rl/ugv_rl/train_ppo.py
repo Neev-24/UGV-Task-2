@@ -81,17 +81,22 @@ def main():
                 device="auto",
             )
         else:
+            executor = rclpy.executors.SingleThreadedExecutor()
+            executor.add_node(bridge)
+            spin_thread = threading.Thread(target = executor.spin, daemon = True)
+            spin_thread.start()
+
             model = PPO(
                 "MlpPolicy",
                 env,
-                learning_rate=1e-3,
-                n_steps=256,
+                learning_rate=3e-4,
+                n_steps=1024,
                 batch_size=64,
-                n_epochs=20,
+                n_epochs=10,
                 gamma=0.99,
                 gae_lambda=0.95,
                 clip_range=0.2,
-                ent_coef=0.02,
+                ent_coef=0.01,
                 policy_kwargs={"net_arch": [128, 128]},
                 verbose=1,
                 device="auto",
