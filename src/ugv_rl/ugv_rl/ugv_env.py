@@ -113,7 +113,7 @@ class UGVBridge(Node):
         deadline = time.monotonic() + 5.0
 
         while not future.done() and time.monotonic() < deadline:
-            rclpy.spin_once(self, timeout_sec=0.05)
+            time.sleep(0.02)
 
         if not future.done():
             raise RuntimeError("Timed out resetting the Gazebo model")
@@ -161,8 +161,12 @@ class UGVEnv(gym.Env):
             return self.bridge.scan, self.bridge.odom
 
     def _pose_and_yaw(self, odom):
-        p = odom.pose.pose.position
-        q = odom.pose.pose.orientation
+        with self.bridge.lock:
+            pose = self.bridge.model_pose
+        if pose is None:
+            pose = odom.pose.pose
+        p = pose.position
+        q = pose.orientation
 
         yaw = math.atan2(
             2.0 * (q.w * q.z + q.x * q.y),
@@ -171,6 +175,27 @@ class UGVEnv(gym.Env):
         return p.x, p.y, yaw
 
     def _observation(self, scan, odom):
+        x, y, yaw = self._pose_and_yaw(odom)
+
+        ranges = np.asarray(scan.ranges, dtype=np.float32)
+        ranges[~np.isfinite(ranges)] = scan.range_max
+        ranges = np.clip(ranges, scan.range_min, scan.range_max)
+
+        sectors = np.array_split(ranges, 24)
+        lidar = np.array(
+            [np.min(s) if len(s) else scan.range_max for s in sectors],
+            dtype=np.float32,
+        )
+        lidar = np.clip(lidar / scan.range_max, 0.0, 1.0)
+
+        dx = self.goal[0] - x
+        dy = self.goal[1] - y
+        distance = math.hypot(dx, dy)
+        relative_angle = math.atan2(
+            math.sin(math.atan2(dy, dx) - yaw),
+            math.cos(math.atan2(dy, dx) - yaw),
+        )
+
         linear_vel = float(odom.twist.twist.linear.x) / 0.3
         angular_vel = float(odom.twist.twist.angular.z) / 1.2
 
@@ -233,7 +258,7 @@ class UGVEnv(gym.Env):
         if clearance < 0.40:
             reward -= 0.5 * (0.40 - max(0.0, clearance)) / 0.40
 
-        self.previous_distance = distanc
+        self.previous_distance = distance
         success = distance < 0.30
         collision = self.bridge.has_collision()
         terminated = success or collision

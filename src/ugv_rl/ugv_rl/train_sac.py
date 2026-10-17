@@ -5,7 +5,7 @@ import argparse
 import glob
 import os
 import re
-
+import threading
 import rclpy
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import CheckpointCallback
@@ -53,6 +53,10 @@ def main():
 
     try:
         bridge = UGVBridge()
+        executor = rclpy.executors.SingleThreadedExecutor()
+        executor.add_node(bridge)
+        spin_thread = threading.Thread(target=executor.spin, daemon=True)
+        spin_thread.start()
         base_env = UGVEnv(bridge)
         env = Monitor(
             base_env,

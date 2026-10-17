@@ -2,6 +2,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import threading
 from pathlib import Path
 
 import rclpy
@@ -69,8 +70,12 @@ def main():
     bridge = None
     env = None
 
-    try:
-        bridge = UGVBridge()
+    bridge = UGVBridge()
+        executor = rclpy.executors.SingleThreadedExecutor()
+        executor.add_node(bridge)
+        spin_thread = threading.Thread(target=executor.spin, daemon=True)
+        spin_thread.start()
+
         env = Monitor(UGVEnv(bridge))
 
         if resume_path is not None:
@@ -81,10 +86,7 @@ def main():
                 device="auto",
             )
         else:
-            executor = rclpy.executors.SingleThreadedExecutor()
-            executor.add_node(bridge)
-            spin_thread = threading.Thread(target = executor.spin, daemon = True)
-            spin_thread.start()
+
 
             model = PPO(
                 "MlpPolicy",

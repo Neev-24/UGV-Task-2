@@ -2,7 +2,7 @@
 
 import argparse
 import time
-
+import threading
 import rclpy
 from stable_baselines3 import SAC
 
@@ -26,6 +26,9 @@ def main():
 
     try:
         bridge = UGVBridge()
+        executor = rclpy.executors.SingleThreadedExecutor()
+        executor.add_node(bridge)
+        threading.Thread(target=executor.spin, daemon=True).start()
         env = UGVEnv(bridge)
 
         model = SAC.load(args.model, device="cpu")
