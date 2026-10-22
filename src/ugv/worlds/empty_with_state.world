@@ -1,12 +1,21 @@
 <?xml version="1.0"?>
 <sdf version="1.6">
   <world name="default">
+
+    <!-- ROS 2 State Plugin: Publishes /gazebo/model_states & provides /gazebo/set_entity_state -->
     <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so">
       <ros>
         <namespace>/gazebo</namespace>
       </ros>
-      <update_rate>10.0</update_rate>
+      <update_rate>50.0</update_rate>
     </plugin>
+
+    <!-- Physics settings for stable, fast RL steps -->
+    <physics type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000.0</real_time_update_rate>
+    </physics>
 
     <include>
       <uri>model://sun</uri>
@@ -16,7 +25,163 @@
       <uri>model://ground_plane</uri>
     </include>
 
+    <!-- ================================================================= -->
+    <!-- ARENA BOUNDARY WALLS (Encloses x: [-2.0, 5.0], y: [-3.5, 3.5])    -->
+    <!-- ================================================================= -->
 
+    <!-- Front Wall (x = 5.0) -->
+    <model name="wall_front">
+      <static>true</static>
+      <pose>5.0 0.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.2 7.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 7.2 1.0</size></box></geometry>
+          <material><script><name>Gazebo/Grey</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Back Wall (x = -2.0) -->
+    <model name="wall_back">
+      <static>true</static>
+      <pose>-2.0 0.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.2 7.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 7.2 1.0</size></box></geometry>
+          <material><script><name>Gazebo/Grey</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Left Wall (y = 3.5) -->
+    <model name="wall_left">
+      <static>true</static>
+      <pose>1.5 3.5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>7.2 0.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>7.2 0.2 1.0</size></box></geometry>
+          <material><script><name>Gazebo/Grey</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Right Wall (y = -3.5) -->
+    <model name="wall_right">
+      <static>true</static>
+      <pose>1.5 -3.5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>7.2 0.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>7.2 0.2 1.0</size></box></geometry>
+          <material><script><name>Gazebo/Grey</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================= -->
+    <!-- 3 SPACED-OUT ARENA OBSTACLES (Matches ugv_env.py)                 -->
+    <!-- ================================================================= -->
+
+    <!-- Left Pillar (x = 1.8, y = 1.1) -->
+    <model name="obstacle_left">
+      <static>true</static>
+      <pose>1.8 1.1 0.4 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.18</radius><length>0.8</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.18</radius><length>0.8</length></cylinder></geometry>
+          <material><script><name>Gazebo/Orange</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Right Pillar (x = 1.8, y = -1.1) -->
+    <model name="obstacle_right">
+      <static>true</static>
+      <pose>1.8 -1.1 0.4 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.18</radius><length>0.8</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.18</radius><length>0.8</length></cylinder></geometry>
+          <material><script><name>Gazebo/Orange</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Center-Far Pillar (x = 3.2, y = 0.0) -->
+    <model name="obstacle_center">
+      <static>true</static>
+      <pose>3.2 0.0 0.4 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.18</radius><length>0.8</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.18</radius><length>0.8</length></cylinder></geometry>
+          <material><script><name>Gazebo/Orange</name></script></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================= -->
+    <!-- VISUAL GOAL MARKER (Movable green target ring & pole)             -->
+    <!-- ================================================================= -->
+    <model name="goal_marker">
+      <static>false</static>
+      <pose>2.0 0.0 0.0 0 0 0</pose>
+      <link name="link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.0001</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.0001</iyy><iyz>0</iyz><izz>0.0001</izz>
+          </inertia>
+        </inertial>
+
+        <visual name="target_ring">
+          <pose>0 0 0.005 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.45</radius>
+              <length>0.01</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <script><name>Gazebo/Green</name></script>
+          </material>
+        </visual>
+
+        <visual name="beacon_pole">
+          <pose>0 0 0.35 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.04</radius>
+              <length>0.70</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <script><name>Gazebo/Green</name></script>
+          </material>
+        </visual>
+      </link>
+    </model>
 
   </world>
 </sdf>

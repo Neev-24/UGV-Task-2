@@ -9,3 +9,5 @@ __pycache__/
 # RL training artifacts and backups
 runs/
 *.bak
+
+trash/

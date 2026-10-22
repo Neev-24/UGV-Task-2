@@ -9,9 +9,12 @@ def main():
     rclpy.init()
 
     bridge = UGVBridge()
+    executor = rclpy.executors.SingleThreadedExecutor()
+    executor.add_node(bridge)
+    threading.Thread(target=executor.spin, daemon=True).start()
     env = UGVEnv(bridge)
 
-    model = PPO.load("runs/ugv_ppo_v10/final.zip")
+    model = PPO.load("newruns/ugv_ppo_v1/final.zip")
 
     try:
         obs, info = env.reset()

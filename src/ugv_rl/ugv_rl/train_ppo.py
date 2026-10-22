@@ -69,8 +69,9 @@ def main():
     rclpy.init()
     bridge = None
     env = None
-
-    bridge = UGVBridge()
+    executor = None
+    try:
+        bridge = UGVBridge()
         executor = rclpy.executors.SingleThreadedExecutor()
         executor.add_node(bridge)
         spin_thread = threading.Thread(target=executor.spin, daemon=True)
@@ -98,7 +99,7 @@ def main():
                 gamma=0.99,
                 gae_lambda=0.95,
                 clip_range=0.2,
-                ent_coef=0.01,
+                ent_coef=0.0,
                 policy_kwargs={"net_arch": [128, 128]},
                 verbose=1,
                 device="auto",
@@ -133,6 +134,8 @@ def main():
     finally:
         if env is not None:
             env.close()
+        if executor is not None:
+            executor.shutdown()
         if bridge is not None:
             bridge.destroy_node()
         if rclpy.ok():

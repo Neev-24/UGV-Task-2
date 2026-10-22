@@ -13,7 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description="Test a trained SAC UGV policy")
     parser.add_argument(
         "--model",
-        default="runs/ugv_sac_v7/final.zip",
+        default="runs/ugv_sac_v1/final.zip",
         help="Path to the trained SAC model",
     )
     parser.add_argument("--episodes", type=int, default=5)
