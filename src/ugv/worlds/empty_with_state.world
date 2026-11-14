@@ -93,11 +93,20 @@
     <!-- 3 SPACED-OUT ARENA OBSTACLES (Matches ugv_env.py)                 -->
     <!-- ================================================================= -->
 
-    <!-- Left Pillar (x = 1.8, y = 1.1) -->
+    
     <model name="obstacle_left">
-      <static>true</static>
+      <static>false</static>
       <pose>1.8 1.1 0.4 0 0 0</pose>
       <link name="link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.061433</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.061433</iyy><iyz>0</iyz><izz>0.0162</izz>
+          </inertia>
+        </inertial>
         <collision name="collision">
           <geometry><cylinder><radius>0.18</radius><length>0.8</length></cylinder></geometry>
         </collision>
@@ -108,11 +117,19 @@
       </link>
     </model>
 
-    <!-- Right Pillar (x = 1.8, y = -1.1) -->
     <model name="obstacle_right">
-      <static>true</static>
+      <static>false</static>
       <pose>1.8 -1.1 0.4 0 0 0</pose>
       <link name="link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.061433</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.061433</iyy><iyz>0</iyz><izz>0.0162</izz>
+          </inertia>
+        </inertial>
         <collision name="collision">
           <geometry><cylinder><radius>0.18</radius><length>0.8</length></cylinder></geometry>
         </collision>
@@ -123,11 +140,19 @@
       </link>
     </model>
 
-    <!-- Center-Far Pillar (x = 3.2, y = 0.0) -->
     <model name="obstacle_center">
-      <static>true</static>
+      <static>false</static>
       <pose>3.2 0.0 0.4 0 0 0</pose>
       <link name="link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.061433</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.061433</iyy><iyz>0</iyz><izz>0.0162</izz>
+          </inertia>
+        </inertial>
         <collision name="collision">
           <geometry><cylinder><radius>0.18</radius><length>0.8</length></cylinder></geometry>
         </collision>

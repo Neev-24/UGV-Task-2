@@ -56,22 +56,38 @@ class UGVBridge(Node):
             cmd.angular.z = float(angular_z)
             self.cmd_pub.publish(cmd)
 
-    def reset_model(self, yaw=0.0):
+    def set_entity_pose(self, name, x, y, z, yaw=0.0):
+        """Move an existing Gazebo model to a world position."""
         if not self.set_state_client.wait_for_service(timeout_sec=3.0):
             raise RuntimeError("/gazebo/set_entity_state service unavailable")
 
         req = SetEntityState.Request()
-        req.state.name = 'ugv'
-        req.state.reference_frame = 'world'
-        req.state.pose.position.x = 0.0
-        req.state.pose.position.y = 0.0
-        req.state.pose.position.z = 0.14
-        # Quaternion for rotation around Z-axis by `yaw` radians
+        req.state.name = name
+        req.state.reference_frame = "world"
+
+        req.state.pose.position.x = float(x)
+        req.state.pose.position.y = float(y)
+        req.state.pose.position.z = float(z)
+
         req.state.pose.orientation.z = math.sin(yaw * 0.5)
         req.state.pose.orientation.w = math.cos(yaw * 0.5)
 
         future = self.set_state_client.call_async(req)
         rclpy.spin_until_future_complete(self, future, timeout_sec=3.0)
+
+        if not future.done():
+            raise RuntimeError(f"Timed out while moving '{name}'")
+
+        result = future.result()
+        if result is None or not result.success:
+            raise RuntimeError(
+                f"Gazebo could not move '{name}'. "
+                "Check that the model exists in your world."
+            )
+
+    def reset_model(self, yaw=0.0, x=0.0, y=0.0):
+        """Move the UGV to its starting position and direction."""
+        self.set_entity_pose("ugv", x, y, 0.14, yaw)
         time.sleep(0.2)
 
     def update_goal_marker(self, gx, gy):
@@ -95,7 +111,7 @@ class UGVBridge(Node):
 
 
 class UGVEnv(gym.Env):
-    def __init__(self, bridge, max_steps=160):
+    def __init__(self, bridge, max_steps=300):
         super().__init__()
         self.bridge = bridge
         self.max_steps = max_steps
@@ -146,42 +162,147 @@ class UGVEnv(gym.Env):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        self.steps = 0
-        self.bridge.move(0.0, 0.0)
-        self.bridge.reset_model()  # Spawn cleanly at (0, 0, yaw=0)
 
-        time.sleep(0.15)
+        self.steps = 0
+
+        # Safe area for the robot and goal.
+        x_min, x_max = -1.3, 4.3
+        y_min, y_max = -2.8, 2.8
+
+        # These are the three existing Gazebo obstacle models.
+        obstacle_names = (
+            "obstacle_left",
+            "obstacle_right",
+            "obstacle_center",
+        )
+
+        # 1. Choose a random robot position and heading.
+        start_x = float(self.np_random.uniform(x_min, x_max))
+        start_y = float(self.np_random.uniform(y_min, y_max))
+        start_yaw = float(self.np_random.uniform(-math.pi, math.pi))
+
+        # 2. Choose how many obstacles to use: 0, 1, 2, or 3.
+        obstacle_count = int(
+            self.np_random.integers(0, len(obstacle_names) + 1)
+        )
+
+        obstacles = []
+
+        # Choose positions for the active obstacles.
+        for _ in range(obstacle_count):
+            for _ in range(5000):
+                ox = float(self.np_random.uniform(x_min, x_max))
+                oy = float(self.np_random.uniform(y_min, y_max))
+
+                # Do not place an obstacle too close to the robot.
+                if math.hypot(ox - start_x, oy - start_y) < 1.2:
+                    continue
+
+                # Do not place obstacles too close to one another.
+                too_close = any(
+                    math.hypot(ox - px, oy - py) < 1.2
+                    for px, py in obstacles
+                )
+
+                if too_close:
+                    continue
+
+                obstacles.append((ox, oy))
+                break
+            else:
+                raise RuntimeError(
+                    "Could not find a suitable obstacle position."
+                )
+
+        # 3. Choose a random goal.
+        # Half the goals are 1–3 m away; half are at least 3 m away.
+        choose_far_goal = self.np_random.random() < 0.5
+        goal = None
+
+        for _ in range(5000):
+            gx = float(self.np_random.uniform(x_min, x_max))
+            gy = float(self.np_random.uniform(y_min, y_max))
+
+            distance = math.hypot(gx - start_x, gy - start_y)
+
+            if distance < 1.0:
+                continue
+
+            if choose_far_goal and distance < 3.0:
+                continue
+
+            if not choose_far_goal and distance >= 3.0:
+                continue
+
+            # Keep the goal away from the active obstacles.
+            too_close = any(
+                math.hypot(gx - ox, gy - oy) < 0.85
+                for ox, oy in obstacles
+            )
+
+            if too_close:
+                continue
+
+            goal = (gx, gy)
+            break
+
+        if goal is None:
+            raise RuntimeError("Could not find a suitable goal position.")
+
+        # Store active obstacle positions for click-to-goal testing.
+        self.obstacles = obstacles
+        self.goal = goal
+
+        # 4. Apply the new layout in Gazebo.
+        self.bridge.move(0.0, 0.0)
+
+        # First move all pillars far outside the arena.
+        # Inactive pillars remain there for this episode.
+        for index, name in enumerate(obstacle_names):
+            self.bridge.set_entity_pose(
+                name,
+                100.0 + index * 2.0,
+                100.0,
+                0.4,
+            )
+
+        # Move the robot before placing the active obstacles.
+        self.bridge.reset_model(
+            x=start_x,
+            y=start_y,
+            yaw=start_yaw,
+        )
+
+        # Put the selected pillars at their random positions.
+        for name, (ox, oy) in zip(obstacle_names, obstacles):
+            self.bridge.set_entity_pose(name, ox, oy, 0.4)
+
+        self.bridge.update_goal_marker(*self.goal)
+
+        time.sleep(0.2)
         self.bridge.wait_for_fresh_data()
 
-        obstacles = [(1.8, 1.1), (1.8, -1.1), (3.2, 0.0)]
-
-        # Spawn goals across all 3 lanes with a clean path around pillars
-        lane = int(self.np_random.integers(0, 3))
-        while True:
-            gx = float(self.np_random.uniform(1.3, 2.7))
-            if lane == 0:    # Left lane
-                gy = float(self.np_random.uniform(0.5, 1.80))
-            elif lane == 1:  # Right lane
-                gy = float(self.np_random.uniform(-1.80, -0.5))
-            else:            # Center lane
-                gy = float(self.np_random.uniform(-0.45, 0.45))
-
-            far_from_spawn = math.hypot(gx, gy) >= 1.35
-            far_from_obstacles = all(
-                math.hypot(gx - ox, gy - oy) >= 0.85 for ox, oy in obstacles
+        # Goals and random positions use Gazebo world coordinates.
+        if self.bridge.model_pose is None:
+            raise RuntimeError(
+                "No UGV world pose received on /gazebo/model_states."
             )
-            if far_from_spawn and far_from_obstacles:
-                self.goal = (gx, gy)
-                break
-
-        self.bridge.update_goal_marker(self.goal[0], self.goal[1])
-        print(f"New Goal spawned at: x={self.goal[0]:.2f}m, y={self.goal[1]:.2f}m")
 
         obs, dist, _ = self._get_obs()
         self.prev_dist = dist
-        self.prev_angle = abs(obs[25] * math.pi)
-        return obs, {"distance_to_goal": dist}
+        self.prev_angle = abs(float(obs[25]) * math.pi)
 
+        print(
+            f"New episode: robot=({start_x:.2f}, {start_y:.2f}), "
+            f"heading={math.degrees(start_yaw):.0f}°, "
+            f"obstacles={obstacle_count}, "
+            f"goal=({goal[0]:.2f}, {goal[1]:.2f}), "
+            f"distance={dist:.2f} m",
+            flush=True,
+        )
+
+        return obs, {"distance_to_goal": dist}
+        
     def step(self, action):
         self.steps += 1
         action = np.clip(action, -1.0, 1.0)
